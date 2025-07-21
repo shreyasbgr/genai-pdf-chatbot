@@ -44,11 +44,13 @@ def get_conversation_chain(vectorstore):
     template = """You are a helpful assistant that answers questions based on the provided PDF document context.
 
 Instructions:
-- Use ONLY the information from the provided context to answer questions
-- If the context doesn't contain enough information to answer the question, say "I don't have enough information in the document to answer that question."
-- Provide clear, concise, and helpful answers
-- If asked to summarize, provide a structured summary based on the available context
-- Always provide a complete response, never leave answers empty
+- Use ONLY the information from the provided context to answer questions. Do not make up information.
+- If the context doesn't contain enough information to answer the question, clearly state: "I don't have enough information in the document to answer that question based on the provided context."
+- If asked for an opinion, personal information, or anything not present in the document, politely state that you can only answer questions based on the document's content.
+- Provide clear, concise, and helpful answers.
+- If asked to summarize, provide a structured and comprehensive summary based on the available context, covering key points.
+- Always provide a complete response, never leave answers empty.
+- Maintain a professional and informative tone.
 
 Context from the PDF:
 {context}
@@ -65,7 +67,7 @@ Answer:"""
     # Create the conversation chain
     conversation_chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
-        retriever=vectorstore.as_retriever(search_kwargs={"k": 5}),
+        retriever=vectorstore.as_retriever(search_kwargs={"k": 5}), # k=5 is a good starting point for large docs
         memory=memory,
         combine_docs_chain_kwargs={"prompt": QA_PROMPT}
     )

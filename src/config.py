@@ -13,7 +13,7 @@ def initialize_vertex_ai():
     location = os.getenv("LOCATION", "us-central1")
     
     if not project_id:
-        raise ValueError("PROJECT_ID environment variable is required")
+        raise ValueError("PROJECT_ID environment variable is required. Please set it in your .env file.")
     
     # Initialize Vertex AI
     aiplatform.init(
@@ -34,7 +34,7 @@ def get_project_config():
     location = os.getenv("LOCATION", "us-central1")
     
     if not project_id:
-        raise ValueError("PROJECT_ID environment variable is required")
+        raise ValueError("PROJECT_ID environment variable is required. Please set it in your .env file.")
     
     return project_id, location
 
@@ -47,7 +47,7 @@ def get_model_config():
     """
     return {
         "language_model": os.getenv("MODEL_NAME", "gemini-2.5-pro"),
-        "embedding_model": os.getenv("EMBEDDING_MODEL", "gemini-embedding-001 "),
+        "embedding_model": os.getenv("EMBEDDING_MODEL", "text-embedding-004").strip(), # Default to text-embedding-004 and strip spaces
         "temperature": float(os.getenv("TEMPERATURE", "0")),
         "max_output_tokens": int(os.getenv("MAX_OUTPUT_TOKENS", "1024"))
     }

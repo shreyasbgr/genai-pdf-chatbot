@@ -118,9 +118,10 @@ def main():
         st.session_state.current_pdf_name = None
     if "text_chunks_count" not in st.session_state:
         st.session_state.text_chunks_count = 0
-    # Removed "processing_question" and "last_question" as they are not needed with the new flow
+    if "generating_response" not in st.session_state: # Add this flag
+        st.session_state.generating_response = False
 
-    
+
     # File upload
     pdf_file = st.file_uploader("Upload your PDF", type=["pdf"])
     

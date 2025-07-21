@@ -40,7 +40,7 @@ pdf-chatbot/
      PROJECT_ID=your-google-cloud-project-id
      LOCATION=us-central1
      MODEL_NAME=gemini-2.5-pro
-     EMBEDDING_MODEL=gemini-embedding-001
+     EMBEDDING_MODEL=text-embedding-004
      TEMPERATURE=0
      MAX_OUTPUT_TOKENS=1024
      ```
