@@ -1,137 +1,87 @@
-"""
-Vector Store Module
-
-This module handles vector storage and retrieval using FAISS
-for the PDF RAG Chatbot application.
-"""
-
 import os
-import numpy as np
-from typing import List, Dict, Any
-import faiss
-import pickle
-import config
+from typing import List
+from dotenv import load_dotenv
+from langchain_community.vectorstores import FAISS
+from langchain_google_vertexai import VertexAIEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_core.embeddings import Embeddings
+from src.config import get_project_config
 
+# Load environment variables
+load_dotenv()
 
-class VectorStore:
-    """Manages vector storage and retrieval using FAISS."""
+class BatchSizeOneEmbeddings(Embeddings):
+    """
+    Wrapper for VertexAI embeddings that processes documents one at a time
+    to handle batch size limitations.
+    """
     
-    def __init__(self):
-        """Initialize the vector store."""
-        self.index = None
-        self.documents = []
-        self.index_name = config.VECTOR_STORE_INDEX_NAME
-        self.dimension = 768  # Default embedding dimension
+    def __init__(self, vertex_embeddings: VertexAIEmbeddings):
+        self.vertex_embeddings = vertex_embeddings
     
-    def initialize_store(self, dimension: int = 768):
-        """
-        Initialize the FAISS index.
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        """Embed a list of documents by processing them one at a time."""
+        embeddings = []
+        total = len(texts)
+        print(f"Processing {total} text chunks for embeddings...")
         
-        Args:
-            dimension: Dimension of the embedding vectors
-        """
-        self.dimension = dimension
-        self.index = faiss.IndexFlatL2(dimension)
-        self.documents = []
+        for i, text in enumerate(texts, 1):
+            if i % 10 == 0 or i == total:  # Show progress every 10 chunks
+                print(f"Processing chunk {i}/{total}...")
+            embedding = self.vertex_embeddings.embed_query(text)
+            embeddings.append(embedding)
+        
+        print(f"✅ Successfully created embeddings for {total} chunks")
+        return embeddings
     
-    def store_embeddings(self, embeddings_with_metadata: List[Dict[str, Any]]):
-        """
-        Store embeddings in the FAISS index.
-        
-        Args:
-            embeddings_with_metadata: List of dictionaries containing embeddings and metadata
-        """
-        if self.index is None:
-            self.initialize_store()
-        
-        # Extract embeddings and documents
-        embeddings = [item["embedding"] for item in embeddings_with_metadata]
-        
-        # Store documents for retrieval
-        self.documents.extend(embeddings_with_metadata)
-        
-        # Convert embeddings to numpy array
-        embeddings_array = np.array(embeddings).astype('float32')
-        
-        # Add embeddings to the index
-        self.index.add(embeddings_array)
+    def embed_query(self, text: str) -> List[float]:
+        """Embed a single query text."""
+        return self.vertex_embeddings.embed_query(text)
+
+def get_vectorstore(text_chunks):
+    """
+    Create a vector store from text chunks using Vertex AI embeddings from .env configuration.
     
-    def similarity_search(self, query_embedding: List[float], k: int = 5) -> List[Dict[str, Any]]:
-        """
-        Perform similarity search using the query embedding.
+    Args:
+        text_chunks: List of text chunks
         
-        Args:
-            query_embedding: The query embedding vector
-            k: Number of results to return
-            
-        Returns:
-            List[Dict[str, Any]]: List of similar documents with metadata
-        """
-        if self.index is None or len(self.documents) == 0:
-            return []
-        
-        # Convert query embedding to numpy array
-        query_array = np.array([query_embedding]).astype('float32')
-        
-        # Perform search
-        distances, indices = self.index.search(query_array, min(k, len(self.documents)))
-        
-        # Get the documents for the indices
-        results = []
-        for i, idx in enumerate(indices[0]):
-            if idx < len(self.documents) and idx >= 0:
-                result = self.documents[idx].copy()
-                result["distance"] = float(distances[0][i])
-                results.append(result)
-        
-        return results
+    Returns:
+        Vector store
+    """
+    # Get project configuration
+    project_id, location = get_project_config()
     
-    def save_index(self, directory: str):
-        """
-        Save the FAISS index and documents to disk.
-        
-        Args:
-            directory: Directory to save the index and documents
-        """
-        if self.index is None:
-            return
-        
-        os.makedirs(directory, exist_ok=True)
-        
-        # Save the FAISS index
-        index_path = os.path.join(directory, f"{self.index_name}.index")
-        faiss.write_index(self.index, index_path)
-        
-        # Save the documents
-        docs_path = os.path.join(directory, f"{self.index_name}.docs")
-        with open(docs_path, 'wb') as f:
-            pickle.dump(self.documents, f)
+    # Get embedding model from environment variable
+    embedding_model = os.getenv("EMBEDDING_MODEL", "text-embedding-004")
     
-    def load_index(self, directory: str) -> bool:
-        """
-        Load the FAISS index and documents from disk.
+    try:
+        print(f"Using embedding model from .env: {embedding_model}")
         
-        Args:
-            directory: Directory containing the index and documents
-            
-        Returns:
-            bool: True if loading was successful, False otherwise
-        """
-        index_path = os.path.join(directory, f"{self.index_name}.index")
-        docs_path = os.path.join(directory, f"{self.index_name}.docs")
+        # Initialize Vertex AI embeddings
+        vertex_embeddings = VertexAIEmbeddings(
+            model_name=embedding_model,
+            project=project_id,
+            location=location
+        )
         
-        if not os.path.exists(index_path) or not os.path.exists(docs_path):
-            return False
+        # Test the embeddings with a simple text
+        vertex_embeddings.embed_query("test")
+        print(f"Successfully initialized embedding model: {embedding_model}")
         
-        try:
-            # Load the FAISS index
-            self.index = faiss.read_index(index_path)
-            
-            # Load the documents
-            with open(docs_path, 'rb') as f:
-                self.documents = pickle.load(f)
-            
-            return True
-        except Exception as e:
-            print(f"Error loading index: {e}")
-            return False
+        # Wrap with batch size one handler
+        embeddings = BatchSizeOneEmbeddings(vertex_embeddings)
+        
+    except Exception as e:
+        print(f"Failed to initialize Vertex AI embedding model {embedding_model}: {e}")
+        print("Falling back to HuggingFace embeddings...")
+        
+        # Fall back to HuggingFace embeddings
+        embeddings = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            model_kwargs={'device': 'cpu'}
+        )
+    
+    # Create the vector store
+    vectorstore = FAISS.from_documents(text_chunks, embeddings)
+    
+    return vectorstore

@@ -1,3 +1,7 @@
 .kiro/
 .venv/
+venv/
 .env
+__pycache__/
+vertex-ai-service-key.json
+*.pdf

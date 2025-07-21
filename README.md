@@ -1,78 +1,65 @@
-# PDF RAG Chatbot
+# PDF Chatbot with Vertex AI
 
-A Retrieval-Augmented Generation (RAG) chatbot application that processes PDF documents and provides intelligent question-answering capabilities using Google Vertex AI.
+A streamlined application that allows users to chat with their PDF documents using natural language. This application uses LangChain, Google Vertex AI, Streamlit, and vector databases to provide accurate responses based on the content of uploaded PDFs.
 
-## Setup Instructions
+## Features
 
-### 1. Virtual Environment Setup
-
-The project uses a Python virtual environment located in `.venv/`. To activate it:
-
-```bash
-source .venv/bin/activate
-```
-
-### 2. Dependencies
-
-All required dependencies are already installed in the virtual environment. If you need to reinstall:
-
-```bash
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-### 3. Environment Configuration
-
-1. Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Update the `.env` file with your Google Cloud credentials:
-   - Set `GOOGLE_CLOUD_PROJECT` to your Google Cloud project ID
-   - Set `GOOGLE_APPLICATION_CREDENTIALS` to the path of your service account key file
-   - Optionally adjust `VERTEX_AI_LOCATION` if needed
-
-### 4. Running the Application
-
-Use the provided run script:
-
-```bash
-./run.sh
-```
-
-Or manually:
-
-```bash
-source .venv/bin/activate
-streamlit run app.py
-```
-
-The application will be available at `http://localhost:8501`
+- Upload and process large PDF documents (up to 200+ pages)
+- Ask questions about the PDF content in natural language
+- Get contextually relevant answers from the document
+- Conversation memory to maintain context across multiple questions
+- Powered by Google Vertex AI for embeddings and language model
 
 ## Project Structure
 
 ```
-├── .venv/                  # Python virtual environment
-├── src/                    # Source code modules
-│   ├── __init__.py
-│   ├── document_processor.py
-│   ├── embedding_manager.py
-│   ├── vector_store.py
-│   └── chat_engine.py
+pdf-chatbot/
 ├── app.py                  # Main Streamlit application
-├── config.py              # Configuration settings
-├── requirements.txt       # Python dependencies
-├── run.sh                 # Application startup script
-├── .env.example           # Environment variables template
-└── README.md              # This file
+├── requirements.txt        # Project dependencies
+├── .env                    # Environment variables for Google Cloud
+├── src/
+│   ├── pdf_processor.py    # PDF processing module
+│   ├── vector_store.py     # Vector database module with Vertex AI embeddings
+│   ├── config.py           # Google Cloud configuration
+│   └── chatbot.py          # LangChain conversation module with Vertex AI
 ```
 
-## Features
+## Setup and Installation
 
-- PDF document upload and processing
-- Text extraction and chunking
-- Vector embeddings using Vertex AI
-- Semantic search and retrieval
-- Conversational chat interface
-- Source citation and references
+1. Clone the repository
+2. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+3. Set up your Google Cloud credentials:
+   - Create a service account with access to Vertex AI
+   - Download the service account key JSON file
+   - Update the `.env` file with your Google Cloud project details:
+     ```
+     GOOGLE_APPLICATION_CREDENTIALS=path/to/your/service-account-key.json
+     PROJECT_ID=your-google-cloud-project-id
+     LOCATION=us-central1
+     MODEL_NAME=gemini-2.5-pro
+     EMBEDDING_MODEL=gemini-embedding-001
+     TEMPERATURE=0
+     MAX_OUTPUT_TOKENS=1024
+     ```
+4. Run the application:
+   ```
+   streamlit run app.py
+   ```
+
+## Usage
+
+1. Upload a PDF document using the file uploader
+2. Wait for the document to be processed
+3. Ask questions about the document in the chat input
+4. Receive contextually relevant answers based on the document content
+
+## Technologies Used
+
+- **Streamlit**: For the web interface
+- **LangChain**: For document processing and conversation chains
+- **Google Vertex AI**: For embeddings and language model capabilities
+- **FAISS**: For efficient vector storage and similarity search
+- **Google Cloud Platform**: For infrastructure and API access
