@@ -15,8 +15,7 @@
 * **Robust & Observable**: Integrated with comprehensive error handling and a rotating file-based logging system, making it easy to monitor and debug.
 
 ## Project Structure
-
-
+```
 pdf-chatbot/
 ├── app.py                              # Main Streamlit web application interface
 ├── requirements.txt                    # Python package dependencies
@@ -34,8 +33,7 @@ pdf-chatbot/
 │   ├── chatbot.py                      # Implements the LangChain conversational retrieval chain
 │   └── logger_config.py                # Configures the application's logging system
 └── local_cloud_simulation_run.py       # Python script for local simulation of Streamlit Cloud (Base64 credentials)
-
-
+```
 ## Setup and Installation
 
 Follow these steps to get the PDF Chatbot up and running on your local machine or deployed to Streamlit Cloud.
