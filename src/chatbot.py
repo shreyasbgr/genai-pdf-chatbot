@@ -1,118 +1,83 @@
 import os
-from dotenv import load_dotenv # Although loaded in app.py, good practice to have it if run standalone
-import logging # Import logging
-
+import logging
 from langchain.chains import ConversationalRetrievalChain
-from langchain.memory import ConversationBufferMemory # Reverted import as per previous fix
-from langchain_google_vertexai import VertexAI
-from langchain_core.prompts import PromptTemplate
-from src.config import get_project_config, get_model_config
+from langchain_google_vertexai import ChatVertexAI # Changed from VertexAI
+from langchain.memory import ConversationBufferMemory
+from langchain_core.prompts import PromptTemplate # Ensure this is imported for custom templates
+from src.config import get_model_config # Import get_model_config
 
-# Initialize logger for this module
 logger = logging.getLogger(__name__)
-
-# Load environment variables (only if this module might be run standalone for testing)
-# load_dotenv() 
 
 def get_conversation_chain(vectorstore):
     """
-    Create a conversation chain for the chatbot.
-    
+    Initializes and returns a conversational retrieval chain using a ChatModel.
+
     Args:
-        vectorstore: Vector store containing document embeddings
-        
+        vectorstore: The FAISS vector store containing document embeddings.
+
     Returns:
-        Conversation chain
-        
-    Raises:
-        RuntimeError: If configuration cannot be loaded or LLM fails to initialize.
-        Exception: For any other unexpected errors during chain creation.
+        ConversationalRetrievalChain: The initialized LangChain conversational chain.
     """
-    if vectorstore is None:
-        logger.error("Vectorstore provided to get_conversation_chain is None.")
-        raise ValueError("Cannot create conversation chain with a None vectorstore.")
+    logger.info("Initializing conversation chain with ChatModel.")
 
-    # Get configuration from .env file
-    try:
-        project_id, location = get_project_config()
-        model_config = get_model_config()
-        language_model_name = model_config['language_model']
-        temperature = model_config['temperature']
-        max_output_tokens = model_config['max_output_tokens']
-        logger.info(f"Retrieved project and model configuration for LLM: "
-                    f"Project ID='{project_id}', Location='{location}', "
-                    f"Model='{language_model_name}', Temp='{temperature}', Max Tokens='{max_output_tokens}'")
-    except Exception as e:
-        logger.critical(f"Failed to load project or model configuration for LLM: {e}", exc_info=True)
-        raise RuntimeError(f"Failed to load configuration for language model: {e}")
-    
-    logger.info(f"Attempting to initialize Vertex AI language model: '{language_model_name}'")
-    
-    try:
-        # Initialize the language model with Vertex AI
-        llm = VertexAI(
-            model_name=language_model_name,
-            temperature=temperature,
-            project=project_id,
-            location=location,
-            max_output_tokens=max_output_tokens
-        )
-        # Optional: A quick test to ensure the LLM is callable (can add a simple generate call if needed, but often initialization is enough)
-        # llm.invoke("Hello world")
-        logger.info(f"Successfully initialized Vertex AI language model: '{language_model_name}'.")
-        
-    except Exception as e:
-        logger.critical(f"Failed to initialize Vertex AI language model '{language_model_name}': {e}", exc_info=True)
-        raise RuntimeError(f"Failed to initialize Vertex AI language model. Check your configuration, credentials, and API access. Error: {e}")
-    
-    logger.info("Creating ConversationBufferMemory for chat history.")
-    try:
-        # Create memory for conversation
-        memory = ConversationBufferMemory(
-            memory_key="chat_history",
-            return_messages=True
-        )
-        logger.info("ConversationBufferMemory created successfully.")
-    except Exception as e:
-        logger.error(f"Failed to create ConversationBufferMemory: {e}", exc_info=True)
-        raise RuntimeError(f"Failed to set up conversation memory: {e}")
-    
-    # Create custom prompt with better instructions
-    template = """You are a helpful assistant that answers questions based on the provided PDF document context.
+    # Get model configuration from src/config.py
+    model_config = get_model_config()
 
-Instructions:
-- Use ONLY the information from the provided context to answer questions. Do not make up information.
-- If the context doesn't contain enough information to answer the question, clearly state: "I don't have enough information in the document to answer that question based on the provided context."
-- If asked for an opinion, personal information, or anything not present in the document, politely state that you can only answer questions based on the document's content.
-- Provide clear, concise, and helpful answers.
-- If asked to summarize, provide a structured and comprehensive summary based on the available context, covering key points.
-- Always provide a complete response, never leave answers empty.
-- Maintain a professional and informative tone.
+    # Instantiate the ChatModel (ChatVertexAI)
+    # ChatModels are designed for multi-turn conversations and handle message roles (Human, AI)
+    # more explicitly, often leading to better conversational flow.
+    llm = ChatVertexAI(
+        model_name=model_config["language_model"],
+        temperature=model_config["temperature"],
+        max_output_tokens=model_config["max_output_tokens"],
+        # Add any other ChatVertexAI specific parameters if needed
+    )
+    logger.debug(f"ChatModel instantiated: {model_config['language_model']} with temp={model_config['temperature']}, max_tokens={model_config['max_output_tokens']}")
 
-Context from the PDF:
+    # Setup memory for the conversation
+    # This stores past messages to maintain context
+    memory = ConversationBufferMemory(
+        memory_key='chat_history',
+        return_messages=True, # Important for ChatModels, as they expect message objects
+        output_key='answer' # Specify output_key for ConversationalRetrievalChain
+    )
+    logger.debug("ConversationBufferMemory initialized.")
+
+    # Define a custom prompt for the conversational retrieval chain
+    # This guides the LLM on how to answer based on context and chat history
+    # Using a template for clarity and flexibility
+    custom_template = """You are an AI assistant for answering questions about uploaded PDF documents.
+Use the following pieces of retrieved context to answer the question.
+If you don't know the answer, just say that you don't know, don't try to make up an answer.
+Keep the answer concise and to the point.
+
+Chat History:
+{chat_history}
+
+Context:
 {context}
 
 Question: {question}
-
 Answer:"""
     
-    QA_PROMPT = PromptTemplate(
-        template=template,
-        input_variables=["context", "question"]
+    # Create a PromptTemplate from the custom template
+    qa_prompt = PromptTemplate(
+        template=custom_template,
+        input_variables=["chat_history", "context", "question"]
     )
-    logger.info("PromptTemplate for QA defined.")
-    
-    logger.info("Creating ConversationalRetrievalChain.")
-    try:
-        # Create the conversation chain
-        conversation_chain = ConversationalRetrievalChain.from_llm(
-            llm=llm,
-            retriever=vectorstore.as_retriever(search_kwargs={"k": 5}), # k=5 is a good starting point for large docs
-            memory=memory,
-            combine_docs_chain_kwargs={"prompt": QA_PROMPT}
-        )
-        logger.info("ConversationalRetrievalChain created successfully.")
-        return conversation_chain
-    except Exception as e:
-        logger.critical(f"Failed to create ConversationalRetrievalChain: {e}", exc_info=True)
-        raise RuntimeError(f"Failed to set up conversational chain: {e}")
+    logger.debug("Custom prompt template created.")
+
+    # Initialize the ConversationalRetrievalChain
+    # This chain combines a retriever (for document chunks) with an LLM (for generating answers)
+    # and memory (for conversation history).
+    conversation_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm,
+        retriever=vectorstore.as_retriever(),
+        memory=memory,
+        combine_docs_chain_kwargs={"prompt": qa_prompt}, # Pass the custom prompt to the combine_docs_chain
+        return_source_documents=True # Optional: return the source documents used for the answer
+    )
+    logger.info("ConversationalRetrievalChain initialized successfully.")
+
+    return conversation_chain
+
