@@ -13,7 +13,25 @@
 * **Powered by Google Vertex AI**: Leverages Google's cutting-edge AI models for robust text embeddings (`text-embedding-004`) and advanced language understanding (`gemini-2.5-pro`).
 
 * **Robust & Observable**: Integrated with comprehensive error handling and a rotating file-based logging system, making it easy to monitor and debug.
+## Live app
 
+You can access the live application here: [https://shreyasbgr-genai-pdf-chatbot-app-axkcnc.streamlit.app/](https://shreyasbgr-genai-pdf-chatbot-app-axkcnc.streamlit.app/)
+
+## Technologies Used
+
+* **Streamlit**: The open-source app framework used to build the interactive web user interface.
+
+* **LangChain**: A powerful framework that simplifies the development of LLM-powered applications, handling document loading, chunking, retrieval, and conversational memory.
+
+* **Google Vertex AI**: Google Cloud's enterprise-grade machine learning platform, providing:
+
+    * **`gemini-2.5-pro`**: A highly capable large language model for generating human-like text responses based on the retrieved context.
+
+    * **`text-embedding-004`**: A state-of-the-art text embedding model used to convert text into numerical vectors for efficient similarity search.
+
+* **FAISS**: Facebook AI Similarity Search, an open-source library used here as an efficient in-memory vector store for quick retrieval of relevant document chunks.
+
+* **Google Cloud Platform**: The foundational cloud infrastructure providing the necessary APIs and ser
 ## Project Structure
 ```
 pdf-chatbot/
@@ -150,7 +168,8 @@ This method uses Base64 encoded credentials loaded from `.streamlit/secrets.toml
 
 ## Usage
 
-1.  **Access the App**: After running the application (locally or deployed), it will typically open automatically in your web browser. If not, copy the local URL displayed in your terminal (e.g., `http://localhost:8501`).
+1.  **Access the App**: After running the application (locally or deployed), it will typically open automatically in your web browser. If not, copy the local URL displayed in your terminal (e.g., [http://localhost:8501](http://localhost:8501) or access the deployed app via its public URL:
+[https://shreyasbgr-genai-pdf-chatbot-app-axkcnc.streamlit.app/](https://shreyasbgr-genai-pdf-chatbot-app-axkcnc.streamlit.app/).
 
 2.  **Upload PDF**: Use the "Upload your PDF" file uploader in the Streamlit interface.
 
@@ -160,18 +179,4 @@ This method uses Base64 encoded credentials loaded from `.streamlit/secrets.toml
 
 5.  **Review Logs**: Observe the terminal where you launched the app for real-time log messages, and check the `logs/` directory for stored log files (`app.log` and its rotations).
 
-## Technologies Used
 
-* **Streamlit**: The open-source app framework used to build the interactive web user interface.
-
-* **LangChain**: A powerful framework that simplifies the development of LLM-powered applications, handling document loading, chunking, retrieval, and conversational memory.
-
-* **Google Vertex AI**: Google Cloud's enterprise-grade machine learning platform, providing:
-
-    * **`gemini-2.5-pro`**: A highly capable large language model for generating human-like text responses based on the retrieved context.
-
-    * **`text-embedding-004`**: A state-of-the-art text embedding model used to convert text into numerical vectors for efficient similarity search.
-
-* **FAISS**: Facebook AI Similarity Search, an open-source library used here as an efficient in-memory vector store for quick retrieval of relevant document chunks.
-
-* **Google Cloud Platform**: The foundational cloud infrastructure providing the necessary APIs and ser
