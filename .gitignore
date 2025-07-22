@@ -6,3 +6,4 @@ __pycache__/
 vertex-ai-service-key.json
 *.pdf
 logs/
+.devcontainer/
