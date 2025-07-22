@@ -5,3 +5,4 @@ venv/
 __pycache__/
 vertex-ai-service-key.json
 *.pdf
+logs/
