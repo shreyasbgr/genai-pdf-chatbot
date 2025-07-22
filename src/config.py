@@ -4,12 +4,11 @@ import google.cloud.aiplatform as aiplatform
 import logging
 import json # Import json to parse the credentials content
 from google.oauth2 import service_account # Import service_account for direct credential loading
+import tempfile # Import tempfile for creating temporary file if needed
+import atexit # Import atexit for cleanup
 
 # Initialize logger for this module
 logger = logging.getLogger(__name__)
-
-# Load environment variables (ensure this is done at the top level of your app, e.g., in app.py)
-# load_dotenv() # Removed from here, as it's typically loaded once in app.py
 
 def initialize_vertex_ai():
     """
@@ -34,13 +33,16 @@ def initialize_vertex_ai():
                          "It should either be a path to your service account key file or the JSON content itself.")
 
     credentials = None
+    temp_credentials_file = None # To store path of temp file if created
+
     try:
-        # Attempt to load credentials directly from the content (for Streamlit secrets)
+        # --- FIRST, ATTEMPT TO LOAD CREDENTIALS DIRECTLY FROM THE CONTENT (FOR STREAMLIT SECRETS) ---
         credentials_info = json.loads(credentials_env_var)
         credentials = service_account.Credentials.from_service_account_info(credentials_info)
-        logger.info("Credentials loaded directly from GOOGLE_APPLICATION_CREDENTIALS content.")
+        logger.info("Credentials loaded directly from GOOGLE_APPLICATION_CREDENTIALS content (assuming Streamlit deployment).")
     except json.JSONDecodeError:
-        # If it's not valid JSON, assume it's a file path (for local .env setup)
+        # --- IF NOT VALID JSON, ASSUME IT'S A FILE PATH (FOR LOCAL .ENV SETUP) ---
+        logger.info("GOOGLE_APPLICATION_CREDENTIALS content is not direct JSON. Attempting to load from file path.")
         if os.path.exists(credentials_env_var):
             credentials = service_account.Credentials.from_service_account_file(credentials_env_var)
             logger.info(f"Credentials loaded from file path: {credentials_env_var}")
@@ -64,6 +66,7 @@ def initialize_vertex_ai():
         logger.critical(f"Failed to initialize Vertex AI SDK with project '{project_id}' and location '{location}': {e}", exc_info=True)
         raise RuntimeError(f"Failed to initialize Vertex AI SDK. Check your project ID, location, and authentication. Error: {e}")
 
+# The rest of the functions (get_project_config, get_model_config) remain the same
 def get_project_config():
     """
     Get project configuration from environment variables.
