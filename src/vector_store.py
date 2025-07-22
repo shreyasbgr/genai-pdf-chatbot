@@ -1,64 +1,67 @@
 import os
 from typing import List
-from dotenv import load_dotenv
 from langchain_community.vectorstores import FAISS
 from langchain_google_vertexai import VertexAIEmbeddings
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_core.embeddings import Embeddings # Keep this import for type hinting if needed elsewhere, though not directly used for the main embedding
-from src.config import get_project_config
-from langchain.docstore.document import Document # Import Document class
+from langchain_core.documents import Document # Import Document type for clarity with chunks
+from src.config import get_project_config, get_model_config # get_model_config is needed to get embedding model name
+import logging # Import logging
 
-# Load environment variables
-load_dotenv()
-
-# --- REMOVED BatchSizeOneEmbeddings CLASS ---
-# VertexAIEmbeddings handles internal batching for models that support it,
-# like text-embedding-004.
+# Initialize logger for this module
+logger = logging.getLogger(__name__)
 
 def get_vectorstore(text_chunks: List[Document]):
     """
-    Create a vector store from text chunks using Vertex AI embeddings from .env configuration.
+    Create a FAISS vector store from text chunks using Vertex AI embeddings.
     
     Args:
-        text_chunks: List of text chunks (LangChain Document objects)
+        text_chunks: List of text chunks (LangChain Document objects).
         
     Returns:
-        Vector store (FAISS)
+        FAISS vector store.
+        
+    Raises:
+        ValueError: If no text chunks are provided or if embedding model fails to initialize.
+        Exception: For any other errors during vector store creation.
     """
-    # Get project configuration
-    project_id, location = get_project_config()
-    
-    # Get embedding model from environment variable
-    # Ensure no trailing spaces for the model name
-    embedding_model = os.getenv("EMBEDDING_MODEL", "text-embedding-004").strip() 
+    if not text_chunks:
+        logger.warning("No text chunks provided to get_vectorstore. Cannot create vector store.")
+        raise ValueError("No text chunks available to create a vector store.")
+
+    # Get project and model configuration
+    try:
+        project_id, location = get_project_config()
+        model_config = get_model_config()
+        embedding_model_name = model_config["embedding_model"]
+    except Exception as e:
+        logger.critical(f"Failed to get project or model configuration for embeddings: {e}", exc_info=True)
+        raise RuntimeError(f"Failed to load configuration for embedding model: {e}")
+
+    logger.info(f"Attempting to initialize Vertex AI embeddings with model: '{embedding_model_name}'")
     
     try:
-        print(f"Using embedding model from .env: {embedding_model}")
-        
-        # Initialize Vertex AI embeddings directly.
-        # Langchain's VertexAIEmbeddings will handle batching internally
-        # for models like text-embedding-004 which support it.
-        embeddings = VertexAIEmbeddings(
-            model_name=embedding_model,
+        # Initialize Vertex AI embeddings
+        vertex_embeddings = VertexAIEmbeddings(
+            model_name=embedding_model_name,
             project=project_id,
             location=location
         )
         
-        # Test the embeddings with a simple text to ensure initialization
-        embeddings.embed_query("test query for embedding model")
-        print(f"Successfully initialized embedding model: {embedding_model}")
+        # A quick test to ensure the embedding model is callable
+        _ = vertex_embeddings.embed_query("test embedding functionality")
+        logger.info(f"Successfully initialized and tested Vertex AI embedding model: '{embedding_model_name}'.")
         
     except Exception as e:
-        print(f"Failed to initialize Vertex AI embedding model {embedding_model}: {e}")
-        print("Falling back to HuggingFace embeddings...")
-        
-        # Fall back to HuggingFace embeddings if Vertex AI fails
-        embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2",
-            model_kwargs={'device': 'cpu'}
-        )
+        logger.critical(f"Failed to initialize or test Vertex AI embedding model '{embedding_model_name}': {e}", exc_info=True)
+        # It's crucial for the app's core functionality to have Vertex AI embeddings working.
+        # So, we raise an error rather than falling back to a different provider.
+        raise RuntimeError(f"Failed to initialize Vertex AI embedding model. Please check your configuration, credentials, and API access. Error: {e}")
     
-    # Create the vector store from documents and embeddings
-    vectorstore = FAISS.from_documents(text_chunks, embeddings)
-    
-    return vectorstore
+    logger.info(f"Creating FAISS vector store from {len(text_chunks)} text chunks.")
+    try:
+        # Create the vector store
+        vectorstore = FAISS.from_documents(text_chunks, vertex_embeddings)
+        logger.info("FAISS vector store created successfully.")
+        return vectorstore
+    except Exception as e:
+        logger.critical(f"An error occurred while creating the FAISS vector store: {e}", exc_info=True)
+        raise RuntimeError(f"Failed to create vector store from text chunks: {e}")
