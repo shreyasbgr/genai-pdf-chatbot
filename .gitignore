@@ -1,9 +1,34 @@
-.kiro/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
 .venv/
 venv/
-.env
-__pycache__/
-vertex-ai-service-key.json
-*.pdf
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Logs
 logs/
+
+# IDEs
+.vscode/
+.idea/
+
+# Development Container specific
 .devcontainer/
+
+# Other temporary files
+*.log
+*.tmp
+*.bak
+*.pdf
+
+# Local Credential files
+creds.b64
+vertex-ai-service-key.json
+.env
+.streamlit/secrets.toml
