@@ -42,7 +42,7 @@ pdf-chatbot/
      MODEL_NAME=gemini-2.5-pro
      EMBEDDING_MODEL=text-embedding-004
      TEMPERATURE=0
-     MAX_OUTPUT_TOKENS=1024
+     MAX_OUTPUT_TOKENS=4096
      ```
 4. Run the application:
    ```

@@ -71,7 +71,7 @@ def get_model_config():
         "embedding_model": os.getenv("EMBEDDING_MODEL", "text-embedding-004").strip(),
         # Default to 0 if not set or invalid, with logging for errors
         "temperature": 0.0, 
-        "max_output_tokens": 1024 # Default tokens
+        "max_output_tokens": 4096 # Default tokens
     }
 
     try:
@@ -88,17 +88,17 @@ def get_model_config():
         config["temperature"] = 0.0
 
     try:
-        tokens_str = os.getenv("MAX_OUTPUT_TOKENS", "1024")
+        tokens_str = os.getenv("MAX_OUTPUT_TOKENS", "4096 ")
         config["max_output_tokens"] = int(tokens_str)
         if not (config["max_output_tokens"] > 0):
-            logger.warning(f"MAX_OUTPUT_TOKENS value '{tokens_str}' is not positive. Using default 1024. Please set a positive integer.")
-            config["max_output_tokens"] = 1024
+            logger.warning(f"MAX_OUTPUT_TOKENS value '{tokens_str}' is not positive. Using default 4096. Please set a positive integer.")
+            config["max_output_tokens"] = 4096
     except ValueError:
-        logger.warning(f"Invalid MAX_OUTPUT_TOKENS value '{os.getenv('MAX_OUTPUT_TOKENS')}'. Could not convert to int. Using default 1024.")
-        config["max_output_tokens"] = 1024
+        logger.warning(f"Invalid MAX_OUTPUT_TOKENS value '{os.getenv('MAX_OUTPUT_TOKENS')}'. Could not convert to int. Using default 4096.")
+        config["max_output_tokens"] = 4096
     except Exception as e:
-        logger.warning(f"Unexpected error retrieving MAX_OUTPUT_TOKENS: {e}. Using default 1024.", exc_info=True)
-        config["max_output_tokens"] = 1024
+        logger.warning(f"Unexpected error retrieving MAX_OUTPUT_TOKENS: {e}. Using default 4096.", exc_info=True)
+        config["max_output_tokens"] = 4096
     
     logger.debug(f"Retrieved model config: {config}")
     return config
